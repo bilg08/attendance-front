@@ -7,7 +7,7 @@ function Button({children, onClick}: ButtonProps) {
   return (
     <div 
     onClick={onClick}
-    className='py-2 px-4 rounded mt-2 mx-auto text-white focus:ring-2 bg-sky-500 hover:bg-sky-600 w-fit'>   
+    className='py-2 px-4 rounded mt-2 mx-auto flex justify-center text-white focus:ring-2 bg-sky-600 hover:bg-sky-500 w-full'>   
         {children}
     </div>
   )

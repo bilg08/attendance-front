@@ -2,19 +2,26 @@ import Webcam from "react-webcam";
 import Button from "./Button";
 import axios from "axios";
 import { useCallback, useState } from "react";
+import { toast } from "react-hot-toast";
+import useUser from "@/global/user";
+import useModal from "@/hooks/useModal";
 const videoConstraints = {
   width: 1280,
   height: 720,
   facingMode: "user"
 };
 const imageformat = 'image/jpeg';
-function urlType(type: string) {
-  console.log(type)
-  return type === 'target' ? 'getPresignedUrlToTargetImages' : 'getPresignedUrlToSourceImages'
+function getPresignedUrlByType(type: string) {
+  return type === 'target' ? process.env.NEXT_PUBLIC_AWS_getPresignedUrlToTargetImages : process.env.NEXT_PUBLIC_AWS_getPresignedUrlToSourceImages
 }
 export default function Camera() {
-  async function getPresignedUrl(type: string, userid?: string) {
-    let url = `https://13sc81lk1d.execute-api.us-east-1.amazonaws.com/dev/${urlType(type)}`
+  const {user} = useUser();
+  const userid = user.id;
+  const {onOpen, onClose} = useModal()
+  async function getPresignedUrl(type: string) {
+    let url = getPresignedUrlByType(type) as string;
+    console.log(url);
+    
     try {
       const res = await axios.post(
         url,
@@ -32,13 +39,14 @@ export default function Camera() {
 
   const uploadFileToS3 = useCallback((imageasbase64: string, type: string) => {
     if (!imageasbase64) return;
+    onOpen()
     fetch(imageasbase64).then((res) => res.blob()).then(async (blob) => {
-      const jpegFile = new File([blob], '30ee2c62-a934-4a0a-af11-434a99f3304a.jpeg', {
+      const jpegFile = new File([blob], `${userid}.jpeg`, {
         type: 'image/jpeg',
       });
 
       try {
-        const presignedUrl = await getPresignedUrl(type, '30ee2c62-a934-4a0a-af11-434a99f3304a');
+        const presignedUrl = await getPresignedUrl(type);
         try {
           let options = {
             headers: {
@@ -46,12 +54,18 @@ export default function Camera() {
             },
           };
           await axios.put(presignedUrl, jpegFile, options);
-        } catch (error: any) {
-          console.log(error.message);
-        }
-      } catch (error: any) {
-        console.log(error.message);
-      }
+          onClose();
+          if(type === 'target') {
+            onOpen()
+              const res = await axios.post(`https://c3fgf91h8c.execute-api.us-east-1.amazonaws.com/dev/getResult`, {
+              userid: userid,
+              date: '2023-04-14'
+            });
+            onClose()
+            toast.success(res.data.data)
+          }
+        } catch (error: any) {}
+      } catch (error: any) {}
     })
   }, [])
 
